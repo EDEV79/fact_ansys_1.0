@@ -75,7 +75,9 @@ for venv_dir in venv_candidates:
 # This must happen BEFORE create_app() so os.getenv() calls see all values.
 try:
     from dotenv import load_dotenv
-    load_dotenv(dotenv_path=APP_DIR / ".env", override=True)
+    running_on_render = os.getenv("RENDER", "").lower() == "true"
+    if not running_on_render:
+        load_dotenv(dotenv_path=APP_DIR / ".env", override=False)
 except ImportError:
     pass  # python-dotenv not installed — assume env vars are set by cPanel
 

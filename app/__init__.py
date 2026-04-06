@@ -19,8 +19,11 @@ def load_user(user_id: str):
 
 
 def create_app():
-    # Load .env file — must be first so all os.getenv() calls see the values
-    load_dotenv()
+    # Render must use dashboard environment variables, not a checked-in/local .env.
+    running_on_render = os.getenv("RENDER", "").lower() == "true"
+    if not running_on_render:
+        # Load .env file — must be first so all os.getenv() calls see the values
+        load_dotenv()
 
     # Detect environment — defaults to production for safety
     is_production = os.getenv("FLASK_ENV", "production").lower() == "production"
@@ -60,6 +63,12 @@ def create_app():
     db_name = os.getenv("DB_NAME", "dgi_fact")
     quoted_user = quote_plus(db_user)
     quoted_password = quote_plus(db_password)
+
+    if is_production and running_on_render and db_host in {"localhost", "127.0.0.1"}:
+        raise RuntimeError(
+            "Render is using localhost as DB_HOST. Configure DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME "
+            "in the Render Environment settings for your external database."
+        )
 
     # If a full DATABASE_URL is provided it takes precedence (useful for managed DBs)
     database_url = os.getenv("DATABASE_URL") or (

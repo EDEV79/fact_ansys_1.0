@@ -1,0 +1,69 @@
+{% extends 'base.html' %} {% block title %}Admin | Fact Ansys 1.0{% endblock %} {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <span class="eyebrow">Administración</span>
+    <h1 class="page-title mb-1">Panel Admin</h1>
+    <p class="text-secondary mb-0">Vista global de todos los tenants del sistema.</p>
+  </div>
+  <a href="{{ url_for('clients.index') }}" class="btn btn-dark">Gestionar clientes</a>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-md-4">
+    <div class="metric-card card border-0 shadow-sm rounded-4">
+      <div class="card-body">
+        <span class="metric-label">Usuarios</span>
+        <h3 class="metric-value">{{ summary.users }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="metric-card card border-0 shadow-sm rounded-4">
+      <div class="card-body">
+        <span class="metric-label">Clientes</span>
+        <h3 class="metric-value">{{ summary.clients }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="metric-card card border-0 shadow-sm rounded-4">
+      <div class="card-body">
+        <span class="metric-label">Facturas</span>
+        <h3 class="metric-value">{{ summary.facturas }}</h3>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4">
+  <div class="card-body">
+    <h2 class="h5 mb-3">Clientes recientes</h2>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Cliente</th>
+            <th>RUC</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in latest_clients %}
+          <tr>
+            <td>{{ c.id }}</td>
+            <td>{{ c.name }}</td>
+            <td>{{ c.ruc or '-' }}</td>
+            <td>{{ c.created_at.strftime('%d/%m/%Y') }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="4" class="text-center text-secondary py-3">Sin clientes</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

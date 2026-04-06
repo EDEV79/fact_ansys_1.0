@@ -1,0 +1,89 @@
+{% extends 'base.html' %} {% block title %}Mis clientes | Fact Ansys 1.0{% endblock %} {% block
+content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <span class="eyebrow">Multi-tenant</span>
+    <h1 class="page-title mb-1">Mis clientes</h1>
+    <p class="text-secondary mb-0">
+      Cada cliente tiene sus facturas aisladas. Puedes subir datos y exportar reportes por separado.
+    </p>
+  </div>
+  <a href="{{ url_for('clients.new') }}" class="btn btn-dark">
+    <i class="bi bi-plus-lg me-1"></i>Nuevo cliente
+  </a>
+</div>
+
+{% if clients %}
+<div class="row g-4">
+  {% for client in clients %} {% set clean_name = (client.name | replace('Cliente de ', '') |
+  replace('cliente de ', '') | trim) %} {% if not clean_name %} {% set clean_name = client.name %}
+  {% endif %} {% set tokens = clean_name.split() %} {% if tokens|length >= 2 %} {% set initials =
+  (tokens[0][0] ~ tokens[1][0])|upper %} {% elif clean_name|length >= 2 %} {% set initials =
+  clean_name[:2]|upper %} {% elif clean_name %} {% set initials = clean_name[0]|upper %} {% else %}
+  {% set initials = 'CL' %} {% endif %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card border-0 shadow-sm rounded-4 h-100 client-card">
+      <div class="card-body d-flex flex-column">
+        <div class="d-flex align-items-start gap-3 mb-3">
+          <div class="client-avatar">{{ initials }}</div>
+          <div class="flex-grow-1 min-w-0">
+            <h5 class="mb-0 text-truncate fw-semibold client-name">{{ clean_name }}</h5>
+            {% if client.ruc %}
+            <small class="text-secondary">RUC: {{ client.ruc }}</small>
+            {% endif %}
+          </div>
+        </div>
+        {% if client.description %}
+        <p class="text-secondary small mb-3">{{ client.description }}</p>
+        {% endif %}
+        <div class="d-flex gap-3 mb-3">
+          <div class="text-center">
+            <div class="fw-bold fs-5">{{ client.total_facturas }}</div>
+            <div class="small text-secondary">Facturas</div>
+          </div>
+          <div class="text-center">
+            <div class="fw-bold fs-5 text-muted">{{ client.created_at.strftime('%d/%m/%y') }}</div>
+            <div class="small text-secondary">Creado</div>
+          </div>
+        </div>
+        <div class="mt-auto d-flex gap-2">
+          <a
+            href="{{ url_for('clients.detail', client_id=client.id) }}"
+            class="btn btn-dark btn-sm flex-grow-1"
+          >
+            <i class="bi bi-graph-up me-1"></i>Dashboard
+          </a>
+          <a
+            href="{{ url_for('upload.index', client_id=client.id) }}"
+            class="btn btn-outline-secondary btn-sm"
+          >
+            <i class="bi bi-upload"></i>
+          </a>
+          <form
+            action="{{ url_for('clients.delete', client_id=client.id) }}"
+            method="post"
+            class="d-inline"
+            onsubmit="return confirm('¿Eliminar «{{ client.name }}» y todo su historial?')"
+          >
+            <button class="btn btn-outline-danger btn-sm" type="submit">
+              <i class="bi bi-trash3"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state text-center py-5">
+  <i class="bi bi-people display-1 text-secondary opacity-25"></i>
+  <h3 class="mt-4">Sin clientes todavía</h3>
+  <p class="text-secondary">
+    Crea tu primer cliente para comenzar a subir facturas y ver análisis.
+  </p>
+  <a href="{{ url_for('clients.new') }}" class="btn btn-dark btn-lg mt-2">
+    <i class="bi bi-plus-lg me-1"></i>Crear primer cliente
+  </a>
+</div>
+{% endif %} {% endblock %}

@@ -1,0 +1,55 @@
+{% extends 'base.html' %} {% block title %}Editar — {{ client.name }} | Fact Ansys 1.0{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="mb-4">
+      <a
+        href="{{ url_for('clients.detail', client_id=client.id) }}"
+        class="text-decoration-none text-secondary small"
+      >
+        <i class="bi bi-arrow-left me-1"></i>Volver al dashboard
+      </a>
+    </div>
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-body p-4 p-lg-5">
+        <h2 class="fw-bold mb-4">Editar cliente</h2>
+        <form method="post" class="d-grid gap-3">
+          <div>
+            <label class="form-label fw-semibold">Nombre <span class="text-danger">*</span></label>
+            <input
+              class="form-control form-control-lg"
+              type="text"
+              name="name"
+              required
+              value="{{ request.form.get('name', client.name) }}"
+            />
+          </div>
+          <div>
+            <label class="form-label fw-semibold">RUC / NIT</label>
+            <input
+              class="form-control"
+              type="text"
+              name="ruc"
+              value="{{ request.form.get('ruc', client.ruc or '') }}"
+            />
+          </div>
+          <div>
+            <label class="form-label fw-semibold">Descripción</label>
+            <textarea class="form-control" name="description" rows="3">
+{{ request.form.get('description', client.description or '') }}</textarea
+            >
+          </div>
+          <div class="d-flex gap-2 pt-2">
+            <button class="btn btn-dark flex-grow-1" type="submit">Guardar cambios</button>
+            <a
+              href="{{ url_for('clients.detail', client_id=client.id) }}"
+              class="btn btn-outline-secondary"
+              >Cancelar</a
+            >
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends 'base.html' %} {% block title %}Dashboard | CRM Facturación{% endblock %} {% block
+content %}
+<div
+  class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4"
+>
+  <div>
+    <span class="eyebrow text-dark">Vista general</span>
+    <h1 class="page-title mb-1">Dashboard de facturación</h1>
+    <p class="text-secondary mb-0">
+      Resumen de facturas, filtros dinámicos y concentración de montos por emisor.
+    </p>
+  </div>
+</div>
+
+{% include 'partials/_filters.html' %}
+
+<div class="row g-4 mb-4">
+  <div class="col-md-4">
+    <div class="metric-card card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-body">
+        <span class="metric-label">Total de facturas</span>
+        <h3 class="metric-value">{{ summary.total_facturas }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="metric-card card border-0 shadow-sm rounded-4 h-100 accent-blue">
+      <div class="card-body">
+        <span class="metric-label">Suma total de monto</span>
+        <h3 class="metric-value">${{ '%.2f'|format(summary.total_monto) }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="metric-card card border-0 shadow-sm rounded-4 h-100 accent-gold">
+      <div class="card-body">
+        <span class="metric-label">Suma total de ITBMS</span>
+        <h3 class="metric-value">${{ '%.2f'|format(summary.total_itbms) }}</h3>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-xl-7">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h2 class="h5 mb-1">Monto por emisor</h2>
+            <p class="text-secondary mb-0">Top 10 emisores según monto total filtrado.</p>
+          </div>
+        </div>
+        <canvas id="emisorChart" height="150"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-5">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Agrupación por emisor</h2>
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Emisor</th>
+                <th class="text-end">Monto total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in grouped_by_emisor %}
+              <tr>
+                <td>{{ row.nombre_de_emisor }}</td>
+                <td class="text-end fw-semibold">${{ '%.2f'|format(row.total_monto or 0) }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="2" class="text-center py-4 text-secondary">
+                  No hay datos agrupados disponibles.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2 class="h5 mb-1">Registros recientes</h2>
+      <p class="text-secondary mb-0">Tabla paginada con las columnas principales de facturación.</p>
+    </div>
+    <a class="btn btn-dark" href="{{ url_for('dashboard.facturas') }}">Ver todas</a>
+  </div>
+  {% include 'partials/_invoice_table.html' %}
+</section>
+
+<script id="chart-data" type="application/json">
+  {{ {'labels': chart_labels, 'values': chart_values}|tojson }}
+</script>
+{% endblock %}

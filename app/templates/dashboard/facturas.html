@@ -1,0 +1,13 @@
+{% extends 'base.html' %} {% block title %}Facturas | CRM Facturación{% endblock %} {% block content
+%}
+<div
+  class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4"
+>
+  <div>
+    <span class="eyebrow text-dark">Listado</span>
+    <h1 class="page-title mb-1">Facturas</h1>
+    <p class="text-secondary mb-0">Consulta, filtra y exporta los registros de facturación.</p>
+  </div>
+</div>
+
+{% include 'partials/_filters.html' %} {% include 'partials/_invoice_table.html' %} {% endblock %}

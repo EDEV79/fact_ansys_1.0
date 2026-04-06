@@ -1,0 +1,67 @@
+<div class="card border-0 shadow-sm rounded-4">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Fecha de emisión</th>
+            <th>Emisor</th>
+            <th>Tipo documento</th>
+            <th class="text-end">Subtotal</th>
+            <th class="text-end">ITBMS</th>
+            <th class="text-end">Monto</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for factura in pagination.items %}
+          <tr>
+            <td>{{ factura.fecha_de_emision or '-' }}</td>
+            <td>{{ factura.nombre_de_emisor }}</td>
+            <td>{{ factura.tipo_de_documento }}</td>
+            <td class="text-end">${{ '%.2f'|format(factura.subtotal_value) }}</td>
+            <td class="text-end">${{ '%.2f'|format(factura.itbms_value) }}</td>
+            <td class="text-end fw-semibold">${{ '%.2f'|format(factura.monto_value) }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td class="text-center py-4 text-secondary" colspan="6">
+              No hay resultados para los filtros seleccionados.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% if pagination.pages > 1 %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-end">
+    <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+      <a
+        class="page-link"
+        href="{{ url_for(request.endpoint, page=pagination.prev_num, **filters) if pagination.has_prev else '#' }}"
+        >Anterior</a
+      >
+    </li>
+    {% for page_number in pagination.iter_pages(left_edge=1, left_current=1, right_current=2,
+    right_edge=1) %} {% if page_number %}
+    <li class="page-item {% if page_number == pagination.page %}active{% endif %}">
+      <a class="page-link" href="{{ url_for(request.endpoint, page=page_number, **filters) }}"
+        >{{ page_number }}</a
+      >
+    </li>
+    {% else %}
+    <li class="page-item disabled"><span class="page-link">...</span></li>
+    {% endif %} {% endfor %}
+    <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+      <a
+        class="page-link"
+        href="{{ url_for(request.endpoint, page=pagination.next_num, **filters) if pagination.has_next else '#' }}"
+        >Siguiente</a
+      >
+    </li>
+  </ul>
+</nav>
+{% endif %}

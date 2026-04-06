@@ -1,0 +1,364 @@
+{% extends 'base.html' %} {% block title %}{{ client.name }} | Fact Ansys 1.0{% endblock %} {% block
+content %} {% set dashboard_endpoint = 'clients.detail' if current_user.is_admin else
+'tenant.dashboard' %} {% set back_endpoint = 'clients.index' if current_user.is_admin else
+'tenant.dashboard' %} {# ── Header ─────────────────────────────────────────────────────────────────
+#}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <a
+      href="{{ url_for(back_endpoint, client_id=client.id) if not current_user.is_admin else url_for(back_endpoint) }}"
+      class="text-decoration-none text-secondary small"
+    >
+      <i class="bi bi-arrow-left me-1"></i>Todos los clientes
+    </a>
+    <h1 class="page-title mb-1 mt-1">{{ client.name }}</h1>
+    {% if client.ruc %}
+    <p class="text-secondary mb-0">RUC: {{ client.ruc }}</p>
+    {% endif %}
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{{ url_for('upload.index', client_id=client.id) }}" class="btn btn-dark">
+      <i class="bi bi-upload me-1"></i>Subir datos
+    </a>
+    <a
+      href="{{ url_for('export.excel', client_id=client.id) }}{% if request.query_string %}?{{ request.query_string.decode() }}{% endif %}"
+      class="btn btn-outline-dark"
+    >
+      <i class="bi bi-file-earmark-excel me-1"></i>Excel
+    </a>
+    <a
+      href="{{ url_for('export.pdf', client_id=client.id) }}{% if request.query_string %}?{{ request.query_string.decode() }}{% endif %}"
+      class="btn btn-outline-dark"
+    >
+      <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+    </a>
+    <a href="{{ url_for('clients.edit', client_id=client.id) }}" class="btn btn-outline-secondary">
+      <i class="bi bi-pencil"></i>
+    </a>
+  </div>
+</div>
+
+{# ── Filters ───────────────────────────────────────────────────────────────── #}
+<form class="card border-0 shadow-sm rounded-4 mb-4" method="get" id="filter-form">
+  <div class="card-body row g-3 align-items-end">
+    <div class="col-lg-3">
+      <label class="form-label">Emisor</label>
+      <input
+        class="form-control"
+        type="search"
+        name="nombre_emisor"
+        value="{{ filters.nombre_emisor }}"
+        placeholder="Buscar emisor"
+      />
+    </div>
+    <div class="col-lg-2">
+      <label class="form-label">RUC emisor</label>
+      <input
+        class="form-control"
+        type="search"
+        name="ruc_emisor"
+        value="{{ filters.ruc_emisor }}"
+        placeholder="Ej. 8-123"
+      />
+    </div>
+    <div class="col-lg-2">
+      <label class="form-label">Desde</label>
+      <input
+        class="form-control"
+        type="date"
+        name="fecha_inicio"
+        value="{{ filters.fecha_inicio }}"
+      />
+    </div>
+    <div class="col-lg-2">
+      <label class="form-label">Hasta</label>
+      <input class="form-control" type="date" name="fecha_fin" value="{{ filters.fecha_fin }}" />
+    </div>
+    <div class="col-lg-2">
+      <label class="form-label">Categoría</label>
+      <select class="form-select" name="categoria">
+        <option value="">Todas</option>
+        {% for cat in category_list %}
+        <option value="{{ cat }}" {% if cat in [filters.categoria] %}selected{% endif %}>
+          {{ cat }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-lg-1 d-grid">
+      <button class="btn btn-dark" type="submit">
+        <i class="bi bi-funnel"></i>
+      </button>
+    </div>
+    <div class="col-12 d-flex gap-2">
+      <div class="col-lg-2">
+        <label class="form-label">Monto mín.</label>
+        <input
+          class="form-control"
+          type="number"
+          step="0.01"
+          name="monto_min"
+          value="{{ filters.monto_min }}"
+          placeholder="0.00"
+        />
+      </div>
+      <div class="col-lg-2">
+        <label class="form-label">Monto máx.</label>
+        <input
+          class="form-control"
+          type="number"
+          step="0.01"
+          name="monto_max"
+          value="{{ filters.monto_max }}"
+          placeholder="99999"
+        />
+      </div>
+      <div class="col-lg-2">
+        <label class="form-label">Tipo documento</label>
+        <select class="form-select" name="tipo_documento">
+          <option value="">Todos</option>
+          {% for dt in document_types %}
+          <option value="{{ dt }}" {% if dt in [filters.tipo_documento] %}selected{% endif %}>
+            {{ dt }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-lg-2 align-self-end">
+        <a
+          href="{{ url_for(dashboard_endpoint, client_id=client.id) }}"
+          class="btn btn-outline-secondary w-100"
+          >Limpiar</a
+        >
+      </div>
+    </div>
+  </div>
+</form>
+
+{# ── KPI Cards ─────────────────────────────────────────────────────────────── #}
+<div class="row g-4 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="metric-card card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-body">
+        <span class="metric-label"><i class="bi bi-receipt me-1"></i>Total facturas</span>
+        <h3 class="metric-value">{{ summary.total_facturas }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="metric-card card border-0 shadow-sm rounded-4 h-100 accent-blue">
+      <div class="card-body">
+        <span class="metric-label"><i class="bi bi-currency-dollar me-1"></i>Monto total</span>
+        <h3 class="metric-value">${{ '%.2f'|format(summary.total_monto) }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="metric-card card border-0 shadow-sm rounded-4 h-100 accent-gold">
+      <div class="card-body">
+        <span class="metric-label"><i class="bi bi-percent me-1"></i>Impuesto total</span>
+        <h3 class="metric-value">${{ '%.2f'|format(summary.total_impuesto) }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="metric-card card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-body">
+        <span class="metric-label"><i class="bi bi-calculator me-1"></i>Promedio / factura</span>
+        <h3 class="metric-value">${{ '%.2f'|format(summary.avg_factura) }}</h3>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Charts ────────────────────────────────────────────────────────────────── #} {% if monthly %}
+<div class="row g-4 mb-4">
+  <div class="col-xl-8">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-body">
+        <h2 class="h5 mb-1">Gastos mensuales</h2>
+        <p class="text-secondary small mb-3">Total acumulado por mes.</p>
+        <canvas id="monthlyChart" height="140"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-4">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-body">
+        <h2 class="h5 mb-1">Por categoría</h2>
+        <p class="text-secondary small mb-3">Distribución del gasto.</p>
+        <canvas id="categoryChart" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %} {# ── Top Providers ─────────────────────────────────────────────────────────── #} {% if
+top_providers %}
+<div class="row g-4 mb-4">
+  <div class="col-xl-6">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Top emisores</h2>
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Emisor</th>
+                <th class="text-end">Total</th>
+                <th class="text-end">%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in top_providers %}
+              <tr>
+                <td>{{ p.nombre_emisor }}</td>
+                <td class="text-end fw-semibold">${{ '%.2f'|format(p.total) }}</td>
+                <td class="text-end">
+                  <span class="badge bg-secondary">{{ '%.1f'|format(p.pct) }}%</span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── AI Insights ───────────────────────────────────────────────────────── #}
+  <div class="col-xl-6">
+    <div class="card border-0 shadow-sm rounded-4 h-100 ai-insights-card">
+      <div class="card-body">
+        <h2 class="h5 mb-3"><i class="bi bi-robot me-2 text-primary"></i>Análisis inteligente</h2>
+        {% if ai_insights and ai_insights.insights %}
+        <ul class="list-unstyled mb-0">
+          {% for insight in ai_insights.insights %}
+          <li class="d-flex gap-2 mb-2">
+            <i class="bi bi-lightbulb text-warning flex-shrink-0 mt-1"></i>
+            <span class="small">{{ insight }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% if ai_insights.anomalies %}
+        <div class="alert alert-warning mt-3 mb-0 small py-2">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          Se detectaron {{ ai_insights.anomalies|length }} mes(es) con gasto inusual.
+        </div>
+        {% endif %} {% else %}
+        <p class="text-secondary small">Sube más datos para generar análisis automático.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %} {# ── Facturas Table ────────────────────────────────────────────────────────── #}
+<section>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2 class="h5 mb-1">Facturas</h2>
+      <p class="text-secondary small mb-0">{{ summary.total_facturas }} registros encontrados.</p>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm rounded-4">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th class="ps-4">Fecha</th>
+              <th>Emisor</th>
+              <th>RUC</th>
+              <th>Tipo</th>
+              <th>Categoría</th>
+              <th class="text-end">Subtotal</th>
+              <th class="text-end">Impuesto</th>
+              <th class="text-end pe-4">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for f in pagination.items %}
+            <tr>
+              <td class="ps-4 text-nowrap">
+                {{ f.fecha_emision.strftime('%d/%m/%Y') if f.fecha_emision else '-' }}
+              </td>
+              <td>{{ f.nombre_emisor }}</td>
+              <td class="text-secondary small">{{ f.ruc_emisor or '-' }}</td>
+              <td>{{ f.tipo_documento or '-' }}</td>
+              <td>
+                {% if f.categoria %}
+                <span class="badge category-badge">{{ f.categoria }}</span>
+                {% else %}-{% endif %}
+              </td>
+              <td class="text-end">${{ '%.2f'|format(f.subtotal|float) }}</td>
+              <td class="text-end">${{ '%.2f'|format(f.impuesto|float) }}</td>
+              <td class="text-end pe-4 fw-semibold">${{ '%.2f'|format(f.total|float) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="8" class="text-center py-5 text-secondary">
+                <i class="bi bi-inbox display-6 d-block mb-2 opacity-25"></i>
+                No hay facturas con los filtros seleccionados.
+                <div class="mt-2">
+                  <a
+                    href="{{ url_for('upload.index', client_id=client.id) }}"
+                    class="btn btn-sm btn-dark"
+                  >
+                    <i class="bi bi-upload me-1"></i>Subir datos
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {# ── Pagination ──────────────────────────────────────────────────────────── #} {% if
+  pagination.pages > 1 %}
+  <nav class="mt-4">
+    <ul class="pagination justify-content-end">
+      <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+        <a
+          class="page-link"
+          href="{{ url_for(dashboard_endpoint, client_id=client.id, page=pagination.prev_num, **filters) if pagination.has_prev else '#' }}"
+        >
+          Anterior
+        </a>
+      </li>
+      {% for pn in pagination.iter_pages(left_edge=1, left_current=1, right_current=2, right_edge=1)
+      %} {% if pn %}
+      <li class="page-item {% if pn == pagination.page %}active{% endif %}">
+        <a
+          class="page-link"
+          href="{{ url_for(dashboard_endpoint, client_id=client.id, page=pn, **filters) }}"
+        >
+          {{ pn }}
+        </a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">…</span></li>
+      {% endif %} {% endfor %}
+      <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+        <a
+          class="page-link"
+          href="{{ url_for(dashboard_endpoint, client_id=client.id, page=pagination.next_num, **filters) if pagination.has_next else '#' }}"
+        >
+          Siguiente
+        </a>
+      </li>
+    </ul>
+  </nav>
+  {% endif %}
+</section>
+
+{# ── Embedded chart data (read by dashboard.js) ──────────────────────────────── #}
+<script type="application/json" id="monthly-data">
+  {{ monthly_json|safe }}
+</script>
+<script type="application/json" id="category-data">
+  {{ category_json|safe }}
+</script>
+{% endblock %}

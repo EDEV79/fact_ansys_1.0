@@ -58,14 +58,35 @@ def create_app():
     db_host = os.getenv("DB_HOST", "127.0.0.1")
     db_port = os.getenv("DB_PORT", "3306")
     db_name = os.getenv("DB_NAME", "dgi_fact")
+    quoted_user = quote_plus(db_user)
     quoted_password = quote_plus(db_password)
 
     # If a full DATABASE_URL is provided it takes precedence (useful for managed DBs)
     database_url = os.getenv("DATABASE_URL") or (
-        f"mysql+pymysql://{db_user}:{quoted_password}@{db_host}:{db_port}/{db_name}"
+        f"mysql+pymysql://{quoted_user}:{quoted_password}@{db_host}:{db_port}/{db_name}"
     )
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+    # TLS options for managed MySQL providers (e.g., TiDB public endpoints).
+    # If DB_SSL_REQUIRED=true or host looks like TiDB Cloud, enable TLS.
+    connect_args = {"charset": "utf8mb4"}
+    db_ssl_required = os.getenv("DB_SSL_REQUIRED", "").lower() in {"1", "true", "yes"}
+    db_ssl_ca = os.getenv("DB_SSL_CA", "").strip()
+    looks_like_tidb = "tidbcloud.com" in db_host.lower()
+
+    if db_ssl_required or looks_like_tidb:
+        ssl_args = {}
+        if db_ssl_ca:
+            ssl_args["ca"] = db_ssl_ca
+        else:
+            try:
+                import certifi
+                ssl_args["ca"] = certifi.where()
+            except Exception:
+                pass
+
+        connect_args["ssl"] = ssl_args if ssl_args else {}
 
     # ── SQLAlchemy connection pool (critical for production stability) ───────
     # pool_recycle: recycle connections before MySQL's default 8-hour timeout
@@ -76,7 +97,7 @@ def create_app():
         "pool_pre_ping": True,
         "pool_size": 5,
         "max_overflow": 10,
-        "connect_args": {"charset": "utf8mb4"},
+        "connect_args": connect_args,
     }
 
     db.init_app(app)

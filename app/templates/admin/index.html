@@ -5,7 +5,10 @@
     <h1 class="page-title mb-1">Panel Admin</h1>
     <p class="text-secondary mb-0">Vista global de todos los tenants del sistema.</p>
   </div>
-  <a href="{{ url_for('clients.index') }}" class="btn btn-dark">Gestionar clientes</a>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('admin.manage_roles') }}" class="btn btn-outline-dark">Roles y permisos</a>
+    <a href="{{ url_for('clients.index') }}" class="btn btn-dark">Gestionar clientes</a>
+  </div>
 </div>
 
 <div class="row g-4 mb-4">

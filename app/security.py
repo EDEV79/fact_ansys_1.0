@@ -5,7 +5,8 @@ from functools import wraps
 from flask import abort
 from flask_login import current_user, login_required
 
-from models import Client
+from app.rbac import get_tenant_client_or_403, permission_required
+from saas_models import Client
 
 
 def admin_required(view):
@@ -36,12 +37,12 @@ def client_required(view):
 
 def get_accessible_client_or_403(client_id: int) -> Client:
     """Return client if current_user can access it, else raise 403/404."""
-    client = Client.query.get_or_404(client_id)
+    client = get_tenant_client_or_403(client_id)
 
     if current_user.is_admin:
         return client
 
-    if current_user.is_client and current_user.client_id == client.id:
+    if current_user.is_client and current_user.client_id == client.id and client.tenant_id == current_user.tenant_id:
         return client
 
     abort(403)

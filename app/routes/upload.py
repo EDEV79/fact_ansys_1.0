@@ -22,7 +22,7 @@ from flask import (
 from flask_login import login_required, current_user
 
 from app.security import get_accessible_client_or_403
-from models import Client, db
+from saas_models import Client, db
 
 upload_bp = Blueprint("upload", __name__, url_prefix="/upload")
 
@@ -35,10 +35,14 @@ def _allowed_file(filename: str) -> bool:
 
 def _load_clients_context() -> tuple[list[Client], int | None]:
     if current_user.is_admin:
-        clients = Client.query.order_by(Client.name).all()
+        clients = Client.query.filter_by(tenant_id=current_user.tenant_id).order_by(Client.name).all()
         preselect = request.args.get("client_id", type=int)
     else:
-        clients = Client.query.filter_by(id=current_user.client_id).all() if current_user.client_id else []
+        clients = (
+            Client.query.filter_by(id=current_user.client_id, tenant_id=current_user.tenant_id).all()
+            if current_user.client_id
+            else []
+        )
         preselect = current_user.client_id
     return clients, preselect
 

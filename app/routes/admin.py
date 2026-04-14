@@ -1,10 +1,13 @@
 """Admin-only routes."""
 
 from flask import Blueprint, jsonify, render_template
+from flask_login import current_user
 from sqlalchemy import func
 
+from app.rbac import build_roles_permissions_ui_payload
 from app.security import admin_required
-from models import Client, Factura, User
+from app.security import permission_required
+from saas_models import Client, Factura, User
 
 
 admin_bp = Blueprint("admin", __name__)
@@ -14,14 +17,19 @@ admin_bp = Blueprint("admin", __name__)
 @admin_required
 def index():
     summary = {
-        "users": User.query.count(),
-        "clients": Client.query.count(),
-        "facturas": Factura.query.count(),
-        "admins": User.query.filter_by(role="admin").count(),
-        "client_users": User.query.filter_by(role="client").count(),
+        "users": User.query.filter_by(tenant_id=current_user.tenant_id).count(),
+        "clients": Client.query.filter_by(tenant_id=current_user.tenant_id).count(),
+        "facturas": Factura.query.filter_by(tenant_id=current_user.tenant_id).count(),
+        "admins": User.query.filter_by(tenant_id=current_user.tenant_id, role="admin").count(),
+        "client_users": User.query.filter_by(tenant_id=current_user.tenant_id, role="client").count(),
     }
 
-    latest_clients = Client.query.order_by(Client.created_at.desc()).limit(10).all()
+    latest_clients = (
+        Client.query.filter_by(tenant_id=current_user.tenant_id)
+        .order_by(Client.created_at.desc())
+        .limit(10)
+        .all()
+    )
     return render_template("admin/index.html", summary=summary, latest_clients=latest_clients)
 
 
@@ -34,6 +42,7 @@ def all_data():
             func.count(Factura.id).label("count"),
             func.coalesce(func.sum(Factura.total), 0).label("total"),
         )
+        .filter(Factura.tenant_id == current_user.tenant_id)
         .group_by(Factura.client_id)
         .all()
     )
@@ -46,3 +55,9 @@ def all_data():
             ]
         }
     )
+
+
+@admin_bp.route("/admin/rbac/roles")
+@permission_required("view_roles")
+def roles_permissions():
+    return jsonify(build_roles_permissions_ui_payload(current_user.tenant_id))

@@ -7,7 +7,7 @@ from flask import Blueprint, jsonify, request, abort
 from flask_login import login_required, current_user
 
 from app.security import get_accessible_client_or_403
-from models import Client, Factura
+from saas_models import Client, Factura
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -23,9 +23,13 @@ def _get_own_client_or_404(client_id: int) -> Client:
 def list_clients():
     """GET /api/clients — list all clients for the current user."""
     if current_user.is_admin:
-        clients = Client.query.all()
+        clients = Client.query.filter_by(tenant_id=current_user.tenant_id).all()
     else:
-        clients = Client.query.filter_by(id=current_user.client_id).all() if current_user.client_id else []
+        clients = (
+            Client.query.filter_by(id=current_user.client_id, tenant_id=current_user.tenant_id).all()
+            if current_user.client_id
+            else []
+        )
     return jsonify(
         [
             {

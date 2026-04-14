@@ -7,7 +7,7 @@ from flask_login import login_required
 from sqlalchemy import Numeric, cast, func
 
 from app.security import admin_required
-from models import FacturaDGI
+from saas_models import FacturaDGI
 
 
 dashboard_bp = Blueprint("dashboard", __name__)

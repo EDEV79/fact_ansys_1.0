@@ -14,7 +14,7 @@ from typing import Any
 import pandas as pd
 
 from app.services.ai_analysis import categorize_factura
-from models import Factura, db
+from saas_models import Client, Factura, db
 
 logger = logging.getLogger(__name__)
 
@@ -304,6 +304,8 @@ def _build_facturas(df: pd.DataFrame, client_id: int) -> tuple[list[Factura], in
     facturas: list[Factura] = []
     skipped = 0
     patched_names = 0
+    client = Client.query.get(client_id)
+    tenant_id = client.tenant_id if client else None
 
     for _, row in df.iterrows():
         nombre = _clean_text(row.get("nombre_emisor"))
@@ -320,6 +322,7 @@ def _build_facturas(df: pd.DataFrame, client_id: int) -> tuple[list[Factura], in
 
         facturas.append(
             Factura(
+                tenant_id=tenant_id,
                 client_id=client_id,
                 nombre_emisor=nombre,
                 ruc_emisor=_clean_text(row.get("ruc_emisor")),

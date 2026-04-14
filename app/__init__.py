@@ -6,8 +6,8 @@ from flask_login import current_user
 from flask_login import LoginManager
 from dotenv import load_dotenv
 from sqlalchemy import text
-
-from models import db, User, Client
+from app.rbac import bootstrap_rbac
+from saas_models import Client, db, User
 
 
 login_manager = LoginManager()
@@ -138,8 +138,7 @@ def create_app():
     # ── Create new tables and ensure RBAC schema ────────────────────────────
     with app.app_context():
         db.create_all()
-        ensure_rbac_schema()
-        ensure_rbac_data()
+        bootstrap_rbac()
 
     @app.route("/")
     def root():

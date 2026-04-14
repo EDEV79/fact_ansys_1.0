@@ -10,7 +10,7 @@ from typing import Any
 
 from sqlalchemy import func, cast, Numeric
 
-from models import Factura, db
+from saas_models import Client, Factura, db
 
 PER_PAGE = 15
 
@@ -36,7 +36,8 @@ def build_filter_query(client_id: int, args) -> tuple:
     Returns:
         (query, filters_dict)
     """
-    query = Factura.query.filter_by(client_id=client_id)
+    client = Client.query.get_or_404(client_id)
+    query = Factura.query.filter_by(client_id=client_id, tenant_id=client.tenant_id)
 
     nombre_emisor = args.get("nombre_emisor", "").strip()
     ruc_emisor = args.get("ruc_emisor", "").strip()
@@ -173,8 +174,9 @@ def get_top_providers(client_id: int, args, limit: int = 10) -> list[dict]:
 
 def get_expense_by_category(client_id: int) -> list[dict]:
     """Aggregate totals by categoria."""
+    client = Client.query.get_or_404(client_id)
     rows = (
-        Factura.query.filter_by(client_id=client_id)
+        Factura.query.filter_by(client_id=client_id, tenant_id=client.tenant_id)
         .with_entities(
             func.coalesce(Factura.categoria, "sin_categoria").label("categoria"),
             func.coalesce(func.sum(cast(Factura.total, Numeric(14, 2))), 0).label("total"),
@@ -198,8 +200,9 @@ def get_expense_by_category(client_id: int) -> list[dict]:
 
 
 def get_document_types(client_id: int) -> list[str]:
+    client = Client.query.get_or_404(client_id)
     rows = (
-        Factura.query.filter_by(client_id=client_id)
+        Factura.query.filter_by(client_id=client_id, tenant_id=client.tenant_id)
         .with_entities(Factura.tipo_documento)
         .distinct()
         .order_by(Factura.tipo_documento)
@@ -209,8 +212,9 @@ def get_document_types(client_id: int) -> list[str]:
 
 
 def get_categories(client_id: int) -> list[str]:
+    client = Client.query.get_or_404(client_id)
     rows = (
-        Factura.query.filter_by(client_id=client_id)
+        Factura.query.filter_by(client_id=client_id, tenant_id=client.tenant_id)
         .with_entities(Factura.categoria)
         .distinct()
         .order_by(Factura.categoria)

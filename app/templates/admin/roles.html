@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+{% block title %}Roles y Permisos | Fact Ansys 1.0{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <span class="eyebrow">Administración</span>
+    <h1 class="page-title mb-1">Roles y permisos</h1>
+    <p class="text-secondary mb-0">
+      Gestiona los accesos del tenant para análisis, carga de Excel y reportes contables.
+    </p>
+  </div>
+  <a href="{{ url_for('admin.index') }}" class="btn btn-outline-dark">
+    <i class="bi bi-arrow-left me-2"></i>Volver al dashboard
+  </a>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-md-3">
+    <div class="metric-card card border-0 shadow-sm rounded-4">
+      <div class="card-body">
+        <span class="metric-label">Usuarios</span>
+        <h3 class="metric-value">{{ summary.users }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="metric-card card border-0 shadow-sm rounded-4">
+      <div class="card-body">
+        <span class="metric-label">Roles</span>
+        <h3 class="metric-value">{{ summary.custom_roles }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="metric-card card border-0 shadow-sm rounded-4">
+      <div class="card-body">
+        <span class="metric-label">Admins UI</span>
+        <h3 class="metric-value">{{ summary.admins }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="metric-card card border-0 shadow-sm rounded-4">
+      <div class="card-body">
+        <span class="metric-label">Usuarios cliente</span>
+        <h3 class="metric-value">{{ summary.client_users }}</h3>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="role-legend card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body">
+    <div class="legend-title">Mini manual de configuración</div>
+    <div class="legend-grid">
+      <div class="legend-item">
+        <strong>1. Crear rol</strong>
+        <span>Escribe nombre, descripción y marca los permisos necesarios.</span>
+      </div>
+      <div class="legend-item">
+        <strong>2. Guardar</strong>
+        <span>Usa el botón del final para crear o actualizar el rol.</span>
+      </div>
+      <div class="legend-item">
+        <strong>3. Asignar usuario</strong>
+        <span>Selecciona roles por usuario y define si entra como Admin o Cliente.</span>
+      </div>
+      <div class="legend-item">
+        <strong>4. Recomendación</strong>
+        <span>Admin: control total. Accountant: facturas y reportes. Viewer: solo lectura.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 align-items-start">
+  <div class="col-xl-5">
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Crear nuevo rol</h2>
+        <form method="post" action="{{ url_for('admin.create_role') }}">
+          <div class="mb-3">
+            <label class="form-label">Nombre del rol</label>
+            <input class="form-control" type="text" name="name" placeholder="ej. auditor" required />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Descripción</label>
+            <textarea class="form-control" name="description" rows="2" placeholder="Describe el alcance del rol"></textarea>
+          </div>
+
+          <div class="permission-matrix">
+            {% for module, module_permissions in permissions_by_module.items() %}
+            <div class="permission-module-card">
+              <div class="permission-module-title">{{ module|capitalize }}</div>
+              <div class="d-flex flex-wrap gap-2">
+                {% for permission in module_permissions %}
+                <label class="permission-pill">
+                  <input type="checkbox" name="permission_ids" value="{{ permission.id }}" />
+                  <span>{{ permission.action|capitalize }}</span>
+                </label>
+                {% endfor %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <button class="btn btn-dark mt-3" type="submit">
+            <i class="bi bi-plus-circle me-2"></i>Crear rol
+          </button>
+        </form>
+      </div>
+    </div>
+
+    {% for role in roles %}
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+          <div>
+            <h3 class="h5 mb-1 text-capitalize">{{ role.name }}</h3>
+            <p class="text-secondary mb-0">{{ role.description or 'Sin descripción.' }}</p>
+          </div>
+          <span class="badge text-bg-light">{{ role.permissions|length }} permisos</span>
+        </div>
+
+        <form method="post" action="{{ url_for('admin.update_role', role_id=role.id) }}">
+          <div class="row g-3">
+            <div class="col-md-5">
+              <label class="form-label">Nombre</label>
+              <input class="form-control" type="text" name="name" value="{{ role.name }}" required />
+            </div>
+            <div class="col-md-7">
+              <label class="form-label">Descripción</label>
+              <input class="form-control" type="text" name="description" value="{{ role.description or '' }}" />
+            </div>
+          </div>
+
+          <div class="permission-matrix mt-3">
+            {% for module, module_permissions in permissions_by_module.items() %}
+            <div class="permission-module-card">
+              <div class="permission-module-title">{{ module|capitalize }}</div>
+              <div class="d-flex flex-wrap gap-2">
+                {% for permission in module_permissions %}
+                <label class="permission-pill">
+                  <input
+                    type="checkbox"
+                    name="permission_ids"
+                    value="{{ permission.id }}"
+                    {% if permission in role.permissions %}checked{% endif %}
+                  />
+                  <span>{{ permission.action|capitalize }}</span>
+                </label>
+                {% endfor %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <button class="btn btn-outline-dark mt-3" type="submit">
+            <i class="bi bi-save me-2"></i>Guardar rol
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="col-xl-7">
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Asignación de roles por usuario</h2>
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Acceso UI</th>
+                <th>Estado</th>
+                <th>Roles RBAC</th>
+                <th class="text-end">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for user in users %}
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ user.full_name or user.usuario }}</div>
+                  <div class="small text-secondary">{{ user.email }}</div>
+                </td>
+                <td colspan="4">
+                  <form method="post" action="{{ url_for('admin.update_user_roles', user_id=user.id) }}">
+                    <div class="row g-3 align-items-start">
+                      <div class="col-md-2">
+                        <select class="form-select" name="legacy_role">
+                          <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+                          <option value="client" {% if user.role == 'client' %}selected{% endif %}>Cliente</option>
+                        </select>
+                      </div>
+                      <div class="col-md-2">
+                        <select class="form-select" name="status">
+                          <option value="1" {% if user.status == 1 %}selected{% endif %}>Activo</option>
+                          <option value="0" {% if user.status != 1 %}selected{% endif %}>Inactivo</option>
+                        </select>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="d-flex flex-wrap gap-2">
+                          {% for role in roles %}
+                          <label class="permission-pill">
+                            <input
+                              type="checkbox"
+                              name="role_ids"
+                              value="{{ role.id }}"
+                              {% if role in user.roles %}checked{% endif %}
+                            />
+                            <span class="text-capitalize">{{ role.name }}</span>
+                          </label>
+                          {% endfor %}
+                        </div>
+                      </div>
+                      <div class="col-md-2 text-md-end">
+                        <button class="btn btn-dark w-100" type="submit">Actualizar</button>
+                      </div>
+                    </div>
+                  </form>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="5" class="text-center text-secondary py-4">No hay usuarios en este tenant.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

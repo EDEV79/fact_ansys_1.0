@@ -10,7 +10,7 @@ from flask import Blueprint, Response, abort, request, current_app
 from flask_login import login_required, current_user
 
 from app.security import get_accessible_client_or_403
-from models import Client
+from saas_models import Client
 
 export_bp = Blueprint("export", __name__, url_prefix="/export")
 

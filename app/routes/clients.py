@@ -7,7 +7,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for,
 from flask_login import login_required, current_user
 
 from app.security import admin_required, get_accessible_client_or_403
-from models import Client, Factura, db
+from saas_models import Client, Factura, db
 
 clients_bp = Blueprint("clients", __name__, url_prefix="/clients")
 
@@ -22,7 +22,11 @@ def _get_own_client_or_404(client_id: int) -> Client:
 @clients_bp.route("/")
 @admin_required
 def index():
-    clients = Client.query.order_by(Client.created_at.desc()).all()
+    clients = (
+        Client.query.filter_by(tenant_id=current_user.tenant_id)
+        .order_by(Client.created_at.desc())
+        .all()
+    )
     return render_template("clients/index.html", clients=clients)
 
 
@@ -42,6 +46,7 @@ def new():
 
         client = Client(
             user_id=current_user.id,
+            tenant_id=current_user.tenant_id,
             name=name,
             ruc=ruc or None,
             description=description or None,

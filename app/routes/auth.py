@@ -9,7 +9,8 @@ from flask_login import login_user, logout_user, login_required, current_user
 import bcrypt
 from sqlalchemy import func, or_
 
-from models import User, Client, db
+from app.rbac import ensure_default_roles_for_tenant
+from saas_models import Client, Role, Tenant, User, UserRole, db
 
 
 auth_bp = Blueprint("auth", __name__)
@@ -20,15 +21,29 @@ def ensure_client_assignment(user: User) -> None:
     if not user or not user.is_client or user.client_id:
         return
 
+    if not user.tenant_id:
+        tenant = Tenant(name=f"{user.full_name or user.usuario} Workspace")
+        db.session.add(tenant)
+        db.session.flush()
+        user.tenant_id = tenant.id
+        ensure_default_roles_for_tenant(tenant.id)
+        default_role_name = "admin" if user.is_admin else "viewer"
+        default_role = Role.query.filter_by(tenant_id=tenant.id, name=default_role_name).first()
+        if default_role:
+            db.session.add(UserRole(user_id=user.id, role_id=default_role.id))
+
     client = Client.query.filter_by(user_id=user.id).order_by(Client.id.asc()).first()
     if not client:
         client = Client(
             user_id=user.id,
+            tenant_id=user.tenant_id,
             name=f"Cliente de {user.full_name or user.usuario}",
             description="Cliente auto-creado por corrección RBAC",
         )
         db.session.add(client)
         db.session.flush()
+    elif client.tenant_id != user.tenant_id:
+        client.tenant_id = user.tenant_id
 
     user.client_id = client.id
     db.session.commit()
@@ -182,8 +197,14 @@ def register():
 
         # Default registration creates tenant client profile and assigns it to the user.
         db.session.flush()
+        tenant = Tenant(name=f"{new_user.full_name or new_user.usuario} Workspace")
+        db.session.add(tenant)
+        db.session.flush()
+        new_user.tenant_id = tenant.id
+        ensure_default_roles_for_tenant(tenant.id)
         client = Client(
             user_id=new_user.id,
+            tenant_id=new_user.tenant_id,
             name=f"Cliente de {new_user.full_name or new_user.usuario}",
             description="Cliente creado automáticamente durante el registro",
         )
@@ -191,6 +212,9 @@ def register():
         db.session.flush()
 
         new_user.client_id = client.id
+        admin_role = Role.query.filter_by(tenant_id=new_user.tenant_id, name="admin").first()
+        if admin_role:
+            db.session.add(UserRole(user_id=new_user.id, role_id=admin_role.id))
         db.session.commit()
 
         login_user(new_user, remember=True)
